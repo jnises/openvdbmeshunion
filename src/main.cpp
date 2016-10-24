@@ -10,7 +10,7 @@ namespace
 {
     struct facetuple
     {
-        uint32_t vertexidx;
+        int32_t vertexidx;
         
         friend std::istream &operator>>(std::istream &in, facetuple &ft)
         {
@@ -20,7 +20,8 @@ namespace
                 in.get(c);
             while(in.get(c))
             {
-                if(c > '0' && c <= '9')
+                assert(c != '-');
+                if(c >= '0' && c <= '9')
                 {
                     ft.vertexidx = ft.vertexidx * 10 + c - '0';
                 }
@@ -35,8 +36,14 @@ namespace
                     break;
                 }
             }
+            // objs are 1 indexed
+            // also, we don't understand negative indices
+            --ft.vertexidx;
+            if(!in)
+                return in;
             // skip normals and uvs
             while(in.get(c) && c != ' ');
+            in.clear();
             return in;
         }
     };
@@ -67,7 +74,11 @@ namespace
                                 {
                                     openvdb::Vec3s vertex;
                                     for(int i = 0; i < 3; ++i)
+                                    {
                                         linestream >> vertex[i];
+                                        // 1 indexed obj
+                                        --vertex[i];
+                                    }
                                     o.vertices.push_back(vertex);
                                     assert(!linestream.fail());
                                 }
@@ -91,7 +102,8 @@ namespace
                             {
                                 facetuple ft;
                                 linestream >> ft;
-                                face.push_back(ft.vertexidx);
+                                assert(ft.vertexidx >= 0);
+                                face.push_back(static_cast<uint32_t>(ft.vertexidx));
                             }
                             if(linestream.fail())
                                 std::cerr << "bad line: " << line << std::endl;
@@ -116,14 +128,16 @@ namespace
             {
                 out << "v";
                 for(int i = 0; i < 3; ++i)
-                    out << " " << v[i];
+                    // 1 index obj
+                    out << " " << (1 + v[i]);
                 out << "\n";
             }
             for(auto f: o.faces)
             {
                 out << "f";
                 for(auto index: f)
-                    out << " " << index;
+                    // 1 index obj
+                    out << " " << (1 + index);
                 out << "\n";
             }
             return out;
@@ -138,15 +152,15 @@ int main(int argc, const char *argv[])
     std::string inname(argv[1]);
     std::ifstream infile(inname);
     assert(infile);
-    obj o;
-    infile >> o;
+    obj inobj;
+    infile >> inobj;
     std::vector<openvdb::Vec3I> triangles;
-    for(auto const &face: o.faces)
+    for(auto const &face: inobj.faces)
     {
         assert(face.size() == 3);
         triangles.push_back(openvdb::Vec3I(face[0], face[1], face[2]));
     }
-    auto grid = openvdb::tools::meshToLevelSet<openvdb::FloatGrid>(openvdb::math::Transform{}, o.vertices, triangles);
+    auto grid = openvdb::tools::meshToLevelSet<openvdb::FloatGrid>(openvdb::math::Transform{}, inobj.vertices, triangles);
     obj outobj;
     std::vector<openvdb::Vec3I> tris;
     std::vector<openvdb::Vec4I> quads;
@@ -157,14 +171,14 @@ int main(int argc, const char *argv[])
         std::vector<uint32_t> face;
         for(int i = 0; i < 3; ++i)
             face.push_back(tri[i]);
-        outfaces.push_back(std::move(face));
+        outobj.faces.push_back(std::move(face));
     }
     for(auto quad: quads)
     {
         std::vector<uint32_t> face;
         for(int i = 0; i < 4; ++i)
             face.push_back(quad[i]);
-        outfaces.push_back(std::move(face));
+        outobj.faces.push_back(std::move(face));
     }
     std::ofstream out(argv[2]);
     out << outobj;
