@@ -15,7 +15,7 @@ using namespace std;
 
 namespace
 {
-    openvdb::FloatGrid::Ptr loadMesh(std::istream &infile, float resolution)
+    openvdb::FloatGrid::Ptr loadMesh(std::istream &infile, double resolution)
     {
         assert(infile);
         obj inobj;
@@ -32,11 +32,13 @@ namespace
 
 int main(int argc, const char *argv[])
 {
-    float resolution;
+    double resolution;
+    double adaptability;
     po::options_description desc("options");
     desc.add_options()
     ("help", "produce help message")
-    ("resolution", po::value<float>(&resolution)->default_value(1), "spatial resolution")
+    ("resolution", po::value<double>(&resolution)->default_value(1), "spatial resolution")
+    ("adaptability", po::value<double>(&adaptability)->default_value(.5), "meshing adaptability")
     ("output,O", po::value<string>())
     ("input,I", po::value<vector<string>>())
     ;
@@ -88,7 +90,7 @@ int main(int argc, const char *argv[])
     obj outobj;
     std::vector<openvdb::Vec3I> tris;
     std::vector<openvdb::Vec4I> quads;
-    openvdb::tools::volumeToMesh(*grid, outobj.vertices, tris, quads);
+    openvdb::tools::volumeToMesh(*grid, outobj.vertices, tris, quads, 0, adaptability);
     std::vector<std::vector<uint32_t>> outfaces;
     for(auto tri: tris)
     {

@@ -14,6 +14,7 @@ namespace deepness
             friend std::istream &operator>>(std::istream &in, facetuple &ft);
         };
 
+        // can only handle triangulated meshes
         struct obj
         {
             std::vector<openvdb::Vec3s> vertices;
