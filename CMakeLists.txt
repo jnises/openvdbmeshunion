@@ -8,7 +8,7 @@ find_package(OPENVDB REQUIRED)
 include_directories(${OPENVDB_INCLUDE_DIRS})
 list(APPEND LIBS ${OPENVDB_LIBRARIES})
 
-add_executable(openvdbmeshunion src/main.cpp)
+add_executable(openvdbmeshunion src/main.cpp src/objmodel.cpp)
 set_property(TARGET openvdbmeshunion PROPERTY CXX_STANDARD 14)
 target_link_libraries(openvdbmeshunion ${LIBS})
 
