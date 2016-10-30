@@ -15,7 +15,7 @@ using namespace std;
 
 namespace
 {
-    openvdb::FloatGrid::Ptr loadMesh(std::istream &infile)
+    openvdb::FloatGrid::Ptr loadMesh(std::istream &infile, float resolution)
     {
         assert(infile);
         obj inobj;
@@ -26,7 +26,7 @@ namespace
             assert(face.size() == 3);
             triangles.push_back(openvdb::Vec3I(face[0], face[1], face[2]));
         }
-        return openvdb::tools::meshToLevelSet<openvdb::FloatGrid>(openvdb::math::Transform{}, inobj.vertices, triangles);
+        return openvdb::tools::meshToLevelSet<openvdb::FloatGrid>(*openvdb::math::Transform::createLinearTransform(1 / resolution), inobj.vertices, triangles);
     }
 }
 
@@ -42,17 +42,17 @@ int main(int argc, const char *argv[])
     ;
     po::positional_options_description p;
     p.add("input", -1);
-    
+
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
     po::notify(vm);
-    
+
     if (vm.count("help"))
     {
         cerr << desc << "\n";
         return 1;
     }
-    
+
     string output;
     vector<string> input;
     if(vm.count("output"))
@@ -64,7 +64,7 @@ int main(int argc, const char *argv[])
         cerr << "output required" << endl;
         return 1;
     }
-    
+
     if(vm.count("input"))
     {
         input = vm["input"].as<vector<string>>();
@@ -74,17 +74,17 @@ int main(int argc, const char *argv[])
         cerr << "2 input files required" << endl;
         return 1;
     }
-    
+
     openvdb::initialize();
     openvdb::FloatGrid::Ptr grid;
     {
         std::ifstream infileA(input[0]);
-        grid = loadMesh(infileA);
+        grid = loadMesh(infileA, resolution);
         std::ifstream infileB(input[1]);
-        auto inB = loadMesh(infileB);
+        auto inB = loadMesh(infileB, resolution);
         openvdb::tools::csgUnion(*grid, *inB);
     }
-    
+
     obj outobj;
     std::vector<openvdb::Vec3I> tris;
     std::vector<openvdb::Vec4I> quads;
